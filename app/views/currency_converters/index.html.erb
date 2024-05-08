@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Currency Converter</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container mt-5">
+  <h1 class="text-center mb-4">Currency Converter</h1>
+  <form id="currencyForm" class="mb-4">
+    <div class="mb-3">
+      <label for="sourceCurrency" class="form-label">Source Currency</label>
+      <select id="sourceCurrency" name="sourceCurrency" class="form-select">
+        <option value="">Select Source Currency</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="destinationCurrency" class="form-label">Destination Currency</label>
+      <select id="destinationCurrency" name="destinationCurrency" class="form-select">
+        <option value="">Select Destination Currency</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="amount" class="form-label">Amount</label>
+      <input type="text" id="amount" name="amount" class="form-control">
+    </div>
+
+    <div class="text-center">
+      <button type="submit" class="btn btn-primary">Convert</button>
+    </div>
+  </form>
+
+  <div id="conversionResult" class="mt-4"></div>
+</div>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+<script>
+  // Fetch currencies from the API
+  fetch('https://free.currconv.com/api/v7/currencies?apiKey=<%= ENV["API_KEY"] %>')
+    .then(response => response.json())
+    .then(data => {
+      const currencies = data.results;
+
+      // Populate source and destination currency dropdowns
+      const sourceCurrencyDropdown = document.getElementById('sourceCurrency');
+      const destinationCurrencyDropdown = document.getElementById('destinationCurrency');
+
+      for (const currencyId in currencies) {
+        const currency = currencies[currencyId];
+        const option = document.createElement('option');
+        option.value = currencyId;
+        option.textContent = `${currency.currencyName} (${currencyId})`;
+
+        sourceCurrencyDropdown.appendChild(option.cloneNode(true));
+        destinationCurrencyDropdown.appendChild(option);
+      }
+    });
+
+  // Form submission handler
+  document.getElementById('currencyForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    // Fetch the form data
+    const formData = new FormData(this);
+
+    // Convert FormData to JSON
+    const jsonObject = {};
+    formData.forEach((value, key) => {
+      jsonObject[key] = value;
+    });
+
+    // Perform the conversion request
+    const sourceCurrency = jsonObject.sourceCurrency;
+    const destinationCurrency = jsonObject.destinationCurrency;
+    const amount = parseFloat(jsonObject.amount);
+
+    // Construct the conversion URL
+    const conversionUrl = `https://free.currconv.com/api/v7/convert?q=${sourceCurrency}_${destinationCurrency}&compact=ultra&apiKey=96a08131d96ee58fc6a3`;
+
+    // Fetch the conversion rate
+    fetch(conversionUrl)
+      .then(response => response.json())
+      .then(data => {
+        // Get the conversion rate
+        const conversionRate = data[`${sourceCurrency}_${destinationCurrency}`];
+        
+        // Perform the conversion
+        const convertedAmount = amount * conversionRate;
+
+        // Display the conversion result
+        document.getElementById('conversionResult').innerHTML = `
+          <div class="alert alert-success" role="alert">
+            ${amount} ${sourceCurrency} equals ${convertedAmount.toFixed(2)} ${destinationCurrency}
+          </div>
+        `;
+      })
+      .catch(error => {
+        console.error('Error fetching conversion rate:', error);
+        // Display error message
+        document.getElementById('conversionResult').innerHTML = `
+          <div class="alert alert-danger" role="alert">
+            Error converting currency. Please try again later.
+          </div>
+        `;
+      });
+  });
+</script>
+</body>
+</html>
